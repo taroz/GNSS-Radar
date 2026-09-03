@@ -3,12 +3,6 @@ GNSS-Radar
 
 <https://www.taroz.net/GNSS-Radar/>
 
-Author
--------------------------------------------------------------------------------
-Taro Suzuki  
-E-Mail: <gnsssdrlib@gmail.com>  
-HP: <http://www.taroz.net>
-
 Overview
 -------------------------------------------------------------------------------
 "GNSS-Radar" is a web application to show the current GNSS constellation
