@@ -1,0 +1,242 @@
+<!------------------------------------------------------------------------------
+* Copyright (C) 2014-2026 Taro Suzuki <gnsssdrlib@gmail.com>
+* This script uses the following libraries:
+*     Leaflet:       https://leafletjs.com/
+*     Highcharts:    https://www.highcharts.com/
+*     satellite.js:  https://github.com/shashwatak/satellite-js
+* TLE is downloaded from https://celestrak.org/
+* PRN assignments are generated from the IGS satellite metadata
+*     https://files.igs.org/pub/station/general/igs_satellite_metadata.snx
+*------------------------------------------------------------------------------>
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <title>GNSS Radar</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta charset="UTF-8">
+    <meta name="description" content="GNSS Radar shows the current GNSS satellite constellation (GPS, GLONASS, Galileo, BeiDou, QZSS, NavIC, SBAS) at any location.">
+    <meta name="twitter:card" content="summary" />
+    <meta name="twitter:site" content="@Taro_Suzuki" />
+    <meta name="twitter:creator" content="@Taro_Suzuki" />
+    <meta name="twitter:title" content="GNSS-Radar" />
+    <link rel="shortcut icon" href="favicon.ico" type="image/vnd.microsoft.ico" />
+    <style type="text/css">
+        html, body {
+            box-sizing: border-box;
+            margin: 0;
+            width: 100%;
+            height: 100%;
+        }
+        #box1 {
+            box-sizing: border-box;
+            width: 100%;
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+        }
+        /* toolbar items lay themselves out and wrap with the window width */
+        #toolbar {
+            box-sizing: border-box;
+            display: flex;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 4px 16px;
+            padding: 4px 10px;
+            min-height: 70px;
+            font-size: 15px;
+            font-family: sans-serif;
+        }
+        #box2 {
+            border-top: 3px solid;
+            box-sizing: border-box;
+            margin: 0;
+            width: 100%;
+            flex: 1 1 auto;
+            min-height: 0;
+        }
+        #dop {
+            border: 1px solid #ffffff;
+            box-sizing: border-box;
+            float: right;
+            width: 50%;
+            height: 40%;
+        }
+        #nsat {
+            border: 1px solid #ffffff;
+            box-sizing: border-box;
+            width: 50%;
+            height: 40%;
+        }
+        #sky {
+            border: 1px solid #ffffff;
+            box-sizing: border-box;
+            float: right;
+            width: 50%;
+            height: 60%;
+        }
+        #map {
+            border: 1px solid #ffffff;
+            box-sizing: border-box;
+            width: 50%;
+            height: 60%;
+        }
+        #tb_title {
+            flex: 0 0 auto;
+            text-align: center;
+        }
+        #tb_title img {
+            max-width: 280px;
+        }
+        #tb_time {
+            flex: 0 0 auto;
+            line-height: 1.5;
+        }
+        /* legend: one column per system, sized by its content */
+        #tb_legend {
+            flex: 0 1 auto;
+            display: flex;
+            align-items: flex-start;
+            flex-wrap: wrap;
+            gap: 2px 14px;
+            white-space: nowrap;
+        }
+        .legcol {
+            text-align: center;
+        }
+        .legcol select {
+            display: block;
+            margin: 2px auto 0;
+        }
+        .legtoggle {
+            cursor: pointer;
+        }
+        #nsatall {
+            font-weight: bold;
+        }
+        .legdot {
+            display: inline-block;
+            width: 14px;
+            height: 14px;
+            border-radius: 50%;
+            vertical-align: -2px;
+            margin-right: 3px;
+            cursor: pointer;
+        }
+        img {
+            vertical-align: middle;
+            cursor: pointer;
+            border-style: none;
+        }
+        a {
+            font-weight: bold;
+            text-decoration: none;
+        }
+        a.vis {
+            color: #000000;
+        }
+        a.invis {
+            color: #b4b4b4;
+        }
+        /* satellite marker drawn on the Leaflet map (replaces per-PRN PNG icons);
+           same look as the skyplot bubbles: half-transparent fill, solid rim,
+           white label with a dark outline */
+        .satmarker {
+            box-sizing: border-box;
+            width: 26px;
+            height: 26px;
+            border-radius: 50%;
+            color: #fff;
+            font-family: sans-serif;
+            font-weight: bold;
+            line-height: 24px;
+            text-align: center;
+            text-shadow: -1px -1px 0 rgba(0,0,0,0.6), 1px -1px 0 rgba(0,0,0,0.6),
+                -1px 1px 0 rgba(0,0,0,0.6), 1px 1px 0 rgba(0,0,0,0.6);
+        }
+        /* mobile: stack panels vertically */
+        @media (max-width: 800px) {
+            html, body, #box1 {
+                height: auto;
+            }
+            #box2 {
+                height: auto;
+                flex: none;
+            }
+            #map, #sky, #nsat, #dop {
+                float: none;
+                width: 100%;
+            }
+            #map { height: 45vh; }
+            #sky { height: 55vh; }
+            #nsat { height: 35vh; }
+            #dop { height: 35vh; }
+        }
+        #loading {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: #ffffff;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-family: sans-serif;
+            font-size: large;
+            z-index: 3000;
+        }
+        #errbar {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            padding: 6px 0;
+            background: #c00;
+            color: #fff;
+            text-align: center;
+            font-family: sans-serif;
+            z-index: 3001;
+        }
+    </style>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <script defer src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script defer src="https://cdn.jsdelivr.net/npm/highcharts@11.4.8/highcharts.js"></script>
+    <script defer src="https://cdn.jsdelivr.net/npm/highcharts@11.4.8/highcharts-more.js"></script>
+    <script defer src="https://cdn.jsdelivr.net/npm/highcharts@11.4.8/modules/exporting.js"></script>
+    <script defer src="https://unpkg.com/satellite.js@5.0.0/dist/satellite.min.js"></script>
+    <script defer src="js/prnmap.js"></script>
+    <script defer src="js/satdata.js"></script>
+    <script defer src="js/compute.js"></script>
+    <script defer src="js/map.js"></script>
+    <script defer src="js/charts.js"></script>
+    <script defer src="js/main.js"></script>
+</head>
+<body>
+    <div id="box1">
+        <div id="toolbar">
+            <div id="tb_title">
+                <a href="https://github.com/taroz/GNSS-Radar#readme" target="_blank"><img src="icon/logo.png" alt="GNSS-Radar" /></a>
+            </div>
+            <div id="tb_time">
+                Date/Time: <input id="datetimepicker" type="datetime-local" style="width:150px;"><br />
+                Lat: <input type="text" id="tb_lat" style="width:56px;">
+                Lon: <input type="text" id="tb_lon" style="width:56px;"><br />
+                El. Mask: <input type="text" id="tb_elmask" style="width:25px;">&nbsp;&nbsp;
+                <input id="b_update" type="button" value="update">
+            </div>
+            <div id="tb_legend">
+                <div class="legcol" id="nsatall"></div>
+            </div>
+        </div>
+        <div id="box2">
+            <div id="dop"></div>
+            <div id="nsat"></div>
+            <div id="sky"></div>
+            <div id="map"></div>
+        </div>
+    </div>
+    <div id="errbar"></div>
+    <div id="loading">Loading TLE data from CelesTrak...</div>
+</body>
+</html>
