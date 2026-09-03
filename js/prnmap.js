@@ -1,6 +1,6 @@
 // prnmap.js: NORAD catalog number -> PRN label (G5/R10/E23/C45/Q194/I5)
 // and block type (GPS-IIF/GLO-M/BDS-3M-CAST/...).
-// Auto-generated from the IGS satellite metadata on 2026-08-29 by
+// Auto-generated from the IGS satellite metadata on 2026-09-03 by
 // .github/scripts/update_prn.py -- do not edit by hand.
 // Source: https://files.igs.org/pub/station/general/igs_satellite_metadata.snx
 const PRNMAP =
