@@ -22,7 +22,6 @@ import json
 import re
 import sys
 import urllib.request
-from datetime import datetime, timezone
 from pathlib import Path
 
 SNX_URL = "https://files.igs.org/pub/station/general/igs_satellite_metadata.snx"
@@ -101,11 +100,10 @@ def main() -> int:
         print(f"ERROR: only {len(prnmap)} entries parsed, refusing to overwrite", file=sys.stderr)
         return 1
 
-    updated = datetime.now(timezone.utc).strftime("%Y-%m-%d")
     js = (
         "// prnmap.js: NORAD catalog number -> PRN label (G5/R10/E23/C45/Q194/I5)\n"
         "// and block type (GPS-IIF/GLO-M/BDS-3M-CAST/...).\n"
-        f"// Auto-generated from the IGS satellite metadata on {updated} by\n"
+        "// Auto-generated from the IGS satellite metadata by\n"
         "// .github/scripts/update_prn.py -- do not edit by hand.\n"
         f"// Source: {SNX_URL}\n"
         "const PRNMAP =\n" + json.dumps(prnmap, indent=1) + ";\n"
